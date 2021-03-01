@@ -1,0 +1,22 @@
+version: '3'
+services:
+  minion:
+    build:
+      context: ./minion/
+    networks:
+      - mynet
+  master:
+    build: 
+      context: ./master/
+      args:
+        MINION_NUMS:
+    networks:
+      - mynet
+    env_file:
+      - .env
+    depends_on:
+      - minion
+networks:
+  mynet:
+
+  
