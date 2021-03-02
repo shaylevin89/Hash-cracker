@@ -34,8 +34,10 @@ def hash_cracker(hash_set, password_range):
 @app.route("/hashes", methods=['POST'])
 def hashes_builder():
     data = request.data.decode()
-    hash_set.add(data)
-    return "data", 200
+    data = data[1:-1].split(", ")
+    for hash_val in data:
+        hash_set.add(hash_val[1:-1])
+    return "", 200
 
 
 @app.route("/range", methods=['POST'])
@@ -47,7 +49,7 @@ def range_builder():
     data = request.data.decode()
     password_range[0] = int(data[1:10])
     password_range[1] = int(data[12:-1])
-    return 'data', 204
+    return '', 204
 
 
 @app.route("/cracked_hashes/<hashes_amount>", methods=['GET'])

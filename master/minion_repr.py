@@ -15,50 +15,56 @@ class Minion:
         self.hash_set = hash_set
         self.received_hash = dict()
 
-    def send_hashes(self, hash_set=None):
+    def send_hashes(self, hash_set=None, timeout=config.timeout):
+        """Chaining of send hashes, send password range and send 'start crack' command together.
+        send health check if cracking request reached time out.
+        return response from minion.
+        return False if error occurred"""
         if not hash_set:
             hash_set = self.hash_set
         hash_accepted = 0
+        if timeout > 30:
+            return False
         try:
-            for hash_val in hash_set:
-                res = requests.post(self.address + '/hashes', hash_val.encode(), timeout=config.timeout)
-                if res.text == 'data':
-                    hash_accepted += 1
-            if hash_accepted == len(hash_set):
-                logging.debug(f'all {hash_accepted} hashes has been sent')
+            res = requests.post(self.address + '/hashes', str(hash_set).encode(), timeout=timeout)
+            if res.status_code == 200:
                 return self.send_range()
         except requests.ConnectionError:
             logging.error(f'minion {self.minion_id} not reachable - crashed')
             return False
         except requests.ReadTimeout:
             logging.error(f'the {hash_accepted}th request reached timeout in minion {self.minion_id}')
-            return self.send_hashes(hash_set)
+            return self.send_hashes(hash_set, timeout+10)
         except Exception as e:
             logging.error(e)
             return False
 
-    def send_range(self, pass_range=None):
+    def send_range(self, pass_range=None, timeout=config.timeout):
         if not pass_range:
             pass_range = self.pass_range
         self.pass_range = pass_range
+        if timeout > 30:
+            return False
         try:
-            requests.post(self.address + '/range', str(pass_range), timeout=config.timeout)
-            logging.info(f'range: {pass_range} has been sent to minion {self.minion_id}')
-            return self.send_start_crack()
+            res = requests.post(self.address + '/range', str(pass_range), timeout=timeout)
+            if res.status_code == 204:
+                logging.info(f'range: {pass_range} has been sent to minion {self.minion_id}')
+                return self.send_start_crack()
+            return False
         except requests.ConnectionError:
             logging.error(f'minion {self.minion_id} not reachable - crashed')
             return False
         except requests.ReadTimeout:
             logging.error(f'range post request reached timeout')
-            return self.send_range()
+            return self.send_range(timeout=timeout+10)
 
     def send_start_crack(self):
         try:
             res = requests.get(
                 self.address + '/cracked_hashes/' + str(len(self.hash_set)), timeout=config.crack_timeout)
-            if res.text == 'not ready':
+            if res.status_code == 400:
                 logging.error(f'the minion did not get full hash set or the range')
-                return self.send_hashes()
+                return False
             elif res.status_code == 200:
                 return self.crack_succeed(res)
         except requests.ConnectionError:
@@ -76,7 +82,7 @@ class Minion:
             res = requests.get(self.address + '/health_check', timeout=timeout)
             if res.status_code == 200:
                 return self.crack_succeed(res)
-            return res.text
+            return False
         except requests.ConnectionError:
             logging.error(f'minion {self.minion_id} not reachable - crashed')
             return False

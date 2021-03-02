@@ -1,8 +1,8 @@
 import sys
 import logging
 import config
-from prestart import file_valid, range_provider
-from minion import Minion
+import prestart
+from minion_repr import Minion
 import concurrent.futures
 import threading
 import os
@@ -22,6 +22,8 @@ class Master:
         self.checked_ranges = 0
 
     def run(self):
+        """initial minion representation for every minion with his password range address and id.
+        make dict with key: future object, value: minion for every minion."""
         self.minions = [Minion(
             self.range_list[minion_num], config.url + str(minion_num + 1) + config.port, self.hash_set, minion_num)
             for minion_num in range(self.minion_amount)]
@@ -35,12 +37,15 @@ class Master:
             self.as_complete(minions_futures)
 
     def as_complete(self, future_dict):
+        """get asynchronous result of each future object (minion) that resolve."""
         for minion_future in concurrent.futures.as_completed(future_dict):
             res = minion_future.result()
             self.result_handler(res, future_dict[minion_future])
 
     def result_handler(self, res, minion):
+        print(res, minion.minion_id)
         if res:  # minion alive
+            print('res')
             self.checked_ranges += 1
             if isinstance(res, dict):
                 self.cracked_hashes.update(res)
@@ -54,7 +59,6 @@ class Master:
                     tmp_range = self.crashed_ranges[0]
                     self.crashed_ranges = self.crashed_ranges[1:]
                     t1 = threading.Thread(target=self.regenerate_range_futures, args=[minion, tmp_range])
-                    # self.regenerate_range_futures(minion, tmp_range)
                     t1.start()
                 elif self.checked_ranges == self.minion_amount:  # no more password to work with
                     logging.info('All possible passwords has been checked')
@@ -65,17 +69,17 @@ class Master:
                     else:
                         logging.info('No cracked hashes')
         else:  # False is received. minion crashed
+            print('else')
             self.crashed_ranges.append(minion.pass_range)
 
 
 def start():
-    logging.info(sys.argv)
     if len(sys.argv) == 3 and sys.argv[2].isdigit() and int(sys.argv[2]) > 0:
         path = sys.argv[1]
         minion_amount = int(sys.argv[2])
-        hash_set = file_valid(path)
+        hash_set = prestart.file_valid(path)
         logging.info(f'Hash file has {len(hash_set)} valid hashes')
-        range_list = range_provider(minion_amount)
+        range_list = prestart.range_provider(minion_amount)
         logging.info(f'Range list ready with {len(range_list)} ranges for {minion_amount} minions')
         master = Master(minion_amount, hash_set, range_list)
         master.run()
