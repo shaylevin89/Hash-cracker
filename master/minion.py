@@ -32,7 +32,7 @@ class Minion:
             return False
         except requests.ReadTimeout:
             logging.error(f'the {hash_accepted}th request reached timeout in minion {self.minion_id}')
-            self.send_hashes(hash_set)
+            return self.send_hashes(hash_set)
         except Exception as e:
             logging.error(e)
             return False
@@ -50,7 +50,7 @@ class Minion:
             return False
         except requests.ReadTimeout:
             logging.error(f'range post request reached timeout')
-            self.send_range()
+            return self.send_range()
 
     def send_start_crack(self):
         try:
@@ -58,7 +58,7 @@ class Minion:
                 self.address + '/cracked_hashes/' + str(len(self.hash_set)), timeout=config.crack_timeout)
             if res.text == 'not ready':
                 logging.error(f'the minion did not get full hash set or the range')
-                # TODO restart?
+                return self.send_hashes()
             elif res.status_code == 200:
                 return self.crack_succeed(res)
         except requests.ConnectionError:
@@ -95,7 +95,7 @@ class Minion:
                 logging.info(f'{hash_key}: {self.received_hash[hash_key]}')
             return self.received_hash
         else:  # minion finished the range without cracking
-            logging.info(f'minion {self.minion_id} finished without cracking')
+            logging.info(f'minion {self.minion_id} finish range {self.pass_range} without cracking')
             return 'Ready to work'
 
     def delete_minion(self):

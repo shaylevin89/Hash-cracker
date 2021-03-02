@@ -74,11 +74,11 @@ def health_check():
 def kill_minion():
     res = request.environ.get('werkzeug.server.shutdown')
     if not res:
-        print('not werkzeug')
+        logging.error('not werkzeug')
     else:
         res()
     return ''
 
 
 if __name__ == '__main__':
-    app.run('127.0.0.1', 3489)  # '0.0.0.0'
+    app.run('0.0.0.0', 3489)

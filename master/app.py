@@ -19,6 +19,7 @@ class Master:
         self.cracked_hashes = dict()
         self.crashed_ranges = []
         self.minions = None
+        self.checked_ranges = 0
 
     def run(self):
         self.minions = [Minion(
@@ -39,13 +40,12 @@ class Master:
             self.result_handler(res, future_dict[minion_future])
 
     def result_handler(self, res, minion):
-        print(f'{res} : {minion.minion_id}')
         if res:  # minion alive
-            # if res: 1. dict - check if finished
+            self.checked_ranges += 1
             if isinstance(res, dict):
                 self.cracked_hashes.update(res)
             if len(self.hash_set) == len(self.cracked_hashes):  # all the hashes has been cracked
-                logging.info('finish cracking successfully')
+                logging.info('Finish cracking successfully')
                 for hash_key in self.cracked_hashes:
                     logging.info(f'{hash_key}: {self.cracked_hashes[hash_key]}')
                 os.kill(os.getpid(), 9)
@@ -53,21 +53,19 @@ class Master:
                 if len(self.crashed_ranges) != 0:
                     tmp_range = self.crashed_ranges[0]
                     self.crashed_ranges = self.crashed_ranges[1:]
-                    print(f'len of uncracked crashed ranges {len(self.crashed_ranges)}')
                     t1 = threading.Thread(target=self.regenerate_range_futures, args=[minion, tmp_range])
                     # self.regenerate_range_futures(minion, tmp_range)
                     t1.start()
-                else:  # no more password to work with
+                elif self.checked_ranges == self.minion_amount:  # no more password to work with
                     logging.info('All possible passwords has been checked')
-                    if len(self.cracked_hashes) > 0:
+                    if len(self.cracked_hashes) != 0:  # there is cracked hashes
                         logging.info('This is the cracked hashes:')
                         for hash_key in self.cracked_hashes:
                             logging.info(f'{hash_key}: {self.cracked_hashes[hash_key]}')
-                    logging.info('No cracked hashes')
-
-        else:
+                    else:
+                        logging.info('No cracked hashes')
+        else:  # False is received. minion crashed
             self.crashed_ranges.append(minion.pass_range)
-            # print(len(minions_futures))
 
 
 def start():
@@ -78,7 +76,7 @@ def start():
         hash_set = file_valid(path)
         logging.info(f'Hash file has {len(hash_set)} valid hashes')
         range_list = range_provider(minion_amount)
-        logging.info(f'Range list ready with {len(range_list)} ranges')
+        logging.info(f'Range list ready with {len(range_list)} ranges for {minion_amount} minions')
         master = Master(minion_amount, hash_set, range_list)
         master.run()
     else:
