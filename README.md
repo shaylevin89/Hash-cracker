@@ -1,4 +1,4 @@
-# hash-cracker
+# Hash-cracker
 
 Requirements:
 - docker
