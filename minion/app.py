@@ -5,6 +5,8 @@ import logging
 import os
 
 logging_level = os.getenv("LOGGING_LEVEL", logging.INFO)
+LOG_FORMAT = "%(levelname)s %(asctime)s - %(message)s"
+logging.basicConfig(level=logging_level, format=LOG_FORMAT)
 hash_set = set()
 password_range = [0, 0]
 success = dict()
@@ -14,8 +16,10 @@ app = Flask(__name__)
 
 
 def hash_cracker(hash_set, password_range):
+    logging.info('start cracking')
     global start_cracking, cracking_ended
     start_cracking = True
+    cracking_ended = False
     for password in range(password_range[0], password_range[1]):
         password = '0' + str(password)
         password_hash = md5(password.encode()).hexdigest()
@@ -24,6 +28,7 @@ def hash_cracker(hash_set, password_range):
         if len(hash_set) == len(success):
             break
     cracking_ended = True
+    logging.info(f'finish cracking {start_cracking}, {cracking_ended}')
 
 
 @app.route("/hashes", methods=['POST'])
@@ -35,6 +40,10 @@ def hashes_builder():
 
 @app.route("/range", methods=['POST'])
 def range_builder():
+    global success, start_cracking, cracking_ended
+    success = dict()
+    start_cracking = False
+    cracking_ended = False
     data = request.data.decode()
     password_range[0] = int(data[1:10])
     password_range[1] = int(data[12:-1])
@@ -51,6 +60,7 @@ def cracked_hashes(hashes_amount=None):
 
 @app.route("/health_check", methods=['GET'])
 def health_check():
+    global start_cracking, cracking_ended
     if start_cracking:
         if not cracking_ended:
             while not cracking_ended:
@@ -71,4 +81,4 @@ def kill_minion():
 
 
 if __name__ == '__main__':
-    app.run('0.0.0.0', 3489)
+    app.run('127.0.0.1', 3489)  # '0.0.0.0'

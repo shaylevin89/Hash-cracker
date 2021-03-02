@@ -15,7 +15,9 @@ class Minion:
         self.hash_set = hash_set
         self.received_hash = dict()
 
-    def send_hashes(self, hash_set):
+    def send_hashes(self, hash_set=None):
+        if not hash_set:
+            hash_set = self.hash_set
         hash_accepted = 0
         try:
             for hash_val in hash_set:
@@ -35,8 +37,10 @@ class Minion:
             logging.error(e)
             return False
 
-    def send_range(self):
-        pass_range = self.pass_range
+    def send_range(self, pass_range=None):
+        if not pass_range:
+            pass_range = self.pass_range
+        self.pass_range = pass_range
         try:
             requests.post(self.address + '/range', str(pass_range), timeout=config.timeout)
             logging.info(f'range: {pass_range} has been sent to minion {self.minion_id}')
@@ -72,6 +76,7 @@ class Minion:
             res = requests.get(self.address + '/health_check', timeout=timeout)
             if res.status_code == 200:
                 return self.crack_succeed(res)
+            return res.text
         except requests.ConnectionError:
             logging.error(f'minion {self.minion_id} not reachable - crashed')
             return False
@@ -93,7 +98,6 @@ class Minion:
             logging.info(f'minion {self.minion_id} finished without cracking')
             return 'Ready to work'
 
-    
     def delete_minion(self):
         try:
             requests.delete(self.address + '/kill_minion', timeout=config.timeout)
