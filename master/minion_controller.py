@@ -52,7 +52,7 @@ class MinionController:
                 return self.start_crack()
             return False
         except requests.ConnectionError:
-            logging.error(f'minion {self.minion_id} not reachable - crashed')
+            logging.error(f'minion {self.minion_id} not reachable - connection error')
             return False
         except requests.ReadTimeout:
             logging.error(f'range post request reached timeout')
@@ -68,7 +68,7 @@ class MinionController:
             elif res.status_code == 200:
                 return self.crack_succeed(res)
         except requests.ConnectionError:
-            logging.error(f'minion {self.minion_id} not reachable - crashed')
+            logging.error(f'minion {self.minion_id} not reachable - connection error')
             return False
         except requests.ReadTimeout:
             return self.health_check()
@@ -84,7 +84,7 @@ class MinionController:
                 return self.crack_succeed(res)
             return False
         except requests.ConnectionError:
-            logging.error(f'minion {self.minion_id} not reachable - crashed')
+            logging.error(f'minion {self.minion_id} not reachable - connection error')
             return False
         except requests.ReadTimeout:
             return self.health_check(timeout + 10)
@@ -108,7 +108,7 @@ class MinionController:
         try:
             requests.delete(self.address + '/kill_minion', timeout=config.timeout)
         except requests.ConnectionError:
-            logging.error(f'minion {self.minion_id} not reachable - crashed')
+            logging.error(f'minion {self.minion_id} not reachable - connection error')
             return False
         except Exception as e:
             logging.error(e)
