@@ -7,7 +7,7 @@ LOG_FORMAT = "%(levelname)s %(asctime)s - %(message)s"
 logging.basicConfig(level=config.logging_level, format=LOG_FORMAT)
 
 
-class Minion:
+class MinionController:
     def __init__(self, pass_range, address, hash_set, minion_id):
         self.minion_id = minion_id+1
         self.pass_range = pass_range
@@ -49,7 +49,7 @@ class Minion:
             res = requests.post(self.address + '/range', str(pass_range), timeout=timeout)
             if res.status_code == 204:
                 logging.info(f'range: {pass_range} has been sent to minion {self.minion_id}')
-                return self.send_start_crack()
+                return self.start_crack()
             return False
         except requests.ConnectionError:
             logging.error(f'minion {self.minion_id} not reachable - crashed')
@@ -58,7 +58,7 @@ class Minion:
             logging.error(f'range post request reached timeout')
             return self.send_range(timeout=timeout+10)
 
-    def send_start_crack(self):
+    def start_crack(self):
         try:
             res = requests.get(
                 self.address + '/cracked_hashes/' + str(len(self.hash_set)), timeout=config.crack_timeout)
@@ -71,12 +71,12 @@ class Minion:
             logging.error(f'minion {self.minion_id} not reachable - crashed')
             return False
         except requests.ReadTimeout:
-            return self.health_check_rec()
+            return self.health_check()
         except Exception as e:
             logging.error(e)
             return False
 
-    def health_check_rec(self, timeout=config.crack_timeout + 10):
+    def health_check(self, timeout=config.crack_timeout + 10):
         timeout = timeout
         try:
             res = requests.get(self.address + '/health_check', timeout=timeout)
@@ -87,7 +87,7 @@ class Minion:
             logging.error(f'minion {self.minion_id} not reachable - crashed')
             return False
         except requests.ReadTimeout:
-            return self.health_check_rec(timeout + 10)
+            return self.health_check(timeout + 10)
         except Exception as e:
             logging.error(e)
             return False

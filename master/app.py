@@ -2,7 +2,7 @@ import sys
 import logging
 import config
 import prestart
-from minion_repr import Minion
+from minion_controller import MinionController
 import concurrent.futures
 import threading
 import os
@@ -22,9 +22,7 @@ class Master:
         self.checked_ranges = 0
 
     def run(self):
-        """initial minion representation for every minion with his password range address and id.
-        make dict with key: future object, value: minion for every minion."""
-        self.minions = [Minion(
+        self.minions = [MinionController(
             self.range_list[minion_num], config.url + str(minion_num + 1) + config.port, self.hash_set, minion_num)
             for minion_num in range(self.minion_amount)]
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -43,9 +41,7 @@ class Master:
             self.result_handler(res, future_dict[minion_future])
 
     def result_handler(self, res, minion):
-        print(res, minion.minion_id)
         if res:  # minion alive
-            print('res')
             self.checked_ranges += 1
             if isinstance(res, dict):
                 self.cracked_hashes.update(res)
@@ -69,7 +65,6 @@ class Master:
                     else:
                         logging.info('No cracked hashes')
         else:  # False is received. minion crashed
-            print('else')
             self.crashed_ranges.append(minion.pass_range)
 
 
