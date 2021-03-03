@@ -30,7 +30,7 @@ class MinionController:
             if res.status_code == 200:
                 return self.send_range()
         except requests.ConnectionError:
-            logging.error(f'minion {self.minion_id} not reachable - crashed')
+            logging.error(f'minion {self.minion_id} not reachable - connection error')
             return False
         except requests.ReadTimeout:
             logging.error(f'the {hash_accepted}th request reached timeout in minion {self.minion_id}')
